@@ -57,12 +57,30 @@ class UserResponse {
 @Resolver()
 export class UserResolver {
 
-  @Mutation(() => User)
+  @Mutation(() => UserResponse)
   async register(
     @Arg('options', () => CreateUserInput) options: CreateUserInput,
     @Ctx() {em}: MyContext
-  ) {
+  ): Promise<UserResponse> {
     const hashedPassword = await argon2.hash(options.password);
+
+    if(options.username.length <= 3) {
+      return {
+        errors: [{
+          field: "username",
+          message: "O nome de usuário deve conter no mínimo 4 caracteres"
+        }]
+      };
+    }
+
+    if(options.password.length <= 4) {
+      return {
+        errors: [{
+          field: "password",
+          message: "A senha deve conter no mínimo 5 caracteres"
+        }]
+      };
+    }
 
     const user = em.create(User, {
       username: options.username,
@@ -72,7 +90,7 @@ export class UserResolver {
       document: options.document
     });
     await em.persistAndFlush(user);
-    return user;
+    return { user };
 
   }
 
@@ -84,18 +102,14 @@ export class UserResolver {
 
     const user = await em.findOne(User, { username: options.username })
 
-    if(!user) {
-      return {
-        errors: [{ field: "username", message: "Usuário não encontrado"}]
-      };
+    let valid = false;
+    if(user) {
+      valid = await argon2.verify(user.password, options.password);
     }
-
-
-    const valid = await argon2.verify(user.password, options.password);
-    if(!valid) {
-      console.log("caiu no valid false")
+    
+    if(!user || !valid) {
       return {
-        errors: [{ field: "password", message: "Senha incorreta" }]
+        errors: [{ field: "username", message: "Usuário e/ou senha inválidos"}]
       };
     }
 
