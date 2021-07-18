@@ -36,6 +36,7 @@ class CreateUserInput {
 
 @ObjectType()
 class FieldError {
+  
   @Field()
   field: string;
 
@@ -46,7 +47,7 @@ class FieldError {
 
 @ObjectType()
 class UserResponse {
-  @Field(() => FieldError, { nullable: true })
+  @Field(() => [FieldError], { nullable: true })
   errors?: FieldError[];
 
   @Field(() => User, { nullable: true })
@@ -92,12 +93,14 @@ export class UserResolver {
 
     const valid = await argon2.verify(user.password, options.password);
     if(!valid) {
+      console.log("caiu no valid false")
       return {
-        errors: [{field: "password", message: "Senha incorreta"}]
+        errors: [{ field: "password", message: "Senha incorreta" }]
       };
     }
 
     return { user };
+    
   }
 
 }
